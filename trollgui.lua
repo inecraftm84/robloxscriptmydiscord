@@ -543,89 +543,153 @@ FunctionManager:register("PoopDecalFly", function()
     end
 end, "Troll", "Poop Decal Flying Chaos")
 
+FunctionManager:register("tptool by fsw6z", function()
+loadstring(game:HttpGet("https://pastebin.com/raw/ChHw6hxb"))() 
+end, "Movement", "TP TOOL ONLY CHINESE")
 
 
 
 
 
 
+FunctionManager:register("Decal Spam with GUI  + Particles", function()
+    local decalID = 97837590196813
+    local decalURL = "http://www.roblox.com/asset/?id=" .. decalID
 
-FunctionManager:register("Decal Spam Auto", function()
-	local decalID = 97837590196813
-	local decalURL = "http://www.roblox.com/asset/?id=" .. decalID
+    local decalTexture = decalURL
 
-	-- 貼圖函數
-	local function applyDecals(part)
-		if part:IsA("BasePart") and not part:FindFirstChild("AlreadyDecaled") then
-			-- 標記防止重複
-			local tag = Instance.new("BoolValue")
-			tag.Name = "AlreadyDecaled"
-			tag.Parent = part
+    local function applyDecalsToPart(part)
+        if part:IsA("BasePart") then
+            -- 先移除其他 decal (不是我們的)
+            for _, dec in pairs(part:GetChildren()) do
+                if dec:IsA("Decal") and dec.Texture ~= decalTexture then
+                    dec:Destroy()
+                end
+            end
+            -- 貼上六個面
+            local faces = {"Front", "Back", "Right", "Left", "Top", "Bottom"}
+            for _, face in pairs(faces) do
+                local d = Instance.new("Decal")
+                d.Texture = decalTexture
+                d.Face = Enum.NormalId[face]
+                d.Parent = part
+            end
+        end
+    end
 
-			-- 移除舊的 Decal
-			for _, child in ipairs(part:GetChildren()) do
-				if child:IsA("Decal") then
-					child:Destroy()
-				end
-			end
+    -- 改角色頭上的臉 Decal 或 Texture
+    local function applyFaceToCharacter(char)
+        if not char then return end
+        local head = char:FindFirstChild("Head")
+        if head then
+            -- 改Decal
+            for _, dec in pairs(head:GetChildren()) do
+                if dec:IsA("Decal") then
+                    dec.Texture = decalTexture
+                end
+            end
+            -- 改Texture (有些臉是Texture)
+            for _, tex in pairs(head:GetChildren()) do
+                if tex:IsA("Texture") then
+                    tex.Texture = decalTexture
+                end
+            end
+        end
+    end
 
-			-- 每一面都貼上新的 Decal
-			for _, face in ipairs(Enum.NormalId:GetEnumItems()) do
-				local decal = Instance.new("Decal")
-				decal.Texture = decalURL
-				decal.Face = face
-				decal.Parent = part
-			end
+    -- 加粒子到角色的 Torso 或 UpperTorso
+    local function addParticlesToCharacter(char)
+        if not char then return end
+        local torso = char:FindFirstChild("Torso") or char:FindFirstChild("UpperTorso")
+        if torso then
+            -- 清除舊的相同特效 (可選)
+            for _, child in pairs(torso:GetChildren()) do
+                if child:IsA("ParticleEmitter") and child.Texture == decalTexture then
+                    child:Destroy()
+                end
+            end
+            -- 新增三個疊加粒子
+            for _ = 1, 3 do
+                local emit = Instance.new("ParticleEmitter")
+                emit.Parent = torso
+                emit.Texture = decalTexture
+                emit.VelocitySpread = 100
+            end
+        end
+    end
 
-			-- 視覺效果
-			part.Material = Enum.Material.Plastic
-			part.Transparency = 0
-		end
-	end
+    -- 先處理 Workspace 裡的所有 BasePart
+    for _, part in pairs(workspace:GetDescendants()) do
+        applyDecalsToPart(part)
+    end
 
-	-- 一開始貼全部現有 BasePart
-	for _, obj in ipairs(workspace:GetDescendants()) do
-		applyDecals(obj)
-	end
+    workspace.DescendantAdded:Connect(function(desc)
+        applyDecalsToPart(desc)
+    end)
 
-	-- 如果有新的物件加入 Workspace，也貼上貼圖
-	workspace.DescendantAdded:Connect(function(obj)
-		applyDecals(obj)
-	end)
+    -- GUI 改圖
+    local function applyDecalsToGUI(guiRoot)
+        for _, obj in pairs(guiRoot:GetDescendants()) do
+            if obj:IsA("ImageLabel") or obj:IsA("ImageButton") then
+                obj.Image = decalTexture
+            end
+        end
+    end
+    local function monitorGuiChanges(guiRoot)
+        guiRoot.DescendantAdded:Connect(function(newObj)
+            if newObj:IsA("ImageLabel") or newObj:IsA("ImageButton") then
+                newObj.Image = decalTexture
+            end
+        end)
+    end
 
-	-- 設定天空盒
-	local skybox = Instance.new("Sky")
-	skybox.Name = "Sky"
-	skybox.SkyboxBk = decalURL
-	skybox.SkyboxDn = decalURL
-	skybox.SkyboxFt = decalURL
-	skybox.SkyboxLf = decalURL
-	skybox.SkyboxRt = decalURL
-	skybox.SkyboxUp = decalURL
-	skybox.Parent = game.Lighting
-	game.Lighting.TimeOfDay = "12:00:00"
+    -- 監聽玩家，改GUI、角色臉和加粒子
+    game.Players.PlayerAdded:Connect(function(player)
+        player.CharacterAdded:Connect(function(char)
+            applyFaceToCharacter(char)
+            addParticlesToCharacter(char)
+        end)
 
-	-- 玩家粒子效果
-	for _, player in ipairs(game.Players:GetPlayers()) do
-		local torso = player.Character and (player.Character:FindFirstChild("Torso") or player.Character:FindFirstChild("UpperTorso"))
-		if torso then
-			for _ = 1, 3 do
-				local emitter = Instance.new("ParticleEmitter")
-				emitter.Texture = decalURL
-				emitter.VelocitySpread = 100
-				emitter.Parent = torso
-			end
-		end
-	end
+        if player:FindFirstChild("PlayerGui") then
+            applyDecalsToGUI(player.PlayerGui)
+            monitorGuiChanges(player.PlayerGui)
+        end
+    end)
 
-	-- 閃爍 Ambient 和 ShadowColor
-	while true do
-		game.Lighting.Ambient = Color3.new(math.random(), math.random(), math.random())
-		wait(0.01)
-		game.Lighting.ShadowColor = Color3.new(math.random(), math.random(), math.random())
-		wait(0.01)
-	end
-end, "Troll", "DECAL SPAM NOT FE")
+    -- 已在線玩家
+    for _, player in pairs(game.Players:GetPlayers()) do
+        if player.Character then
+            applyFaceToCharacter(player.Character)
+            addParticlesToCharacter(player.Character)
+        end
+        if player:FindFirstChild("PlayerGui") then
+            applyDecalsToGUI(player.PlayerGui)
+            monitorGuiChanges(player.PlayerGui)
+        end
+    end
+
+    -- 你的天空盒與閃燈效果 (可改或保留)
+    local s = Instance.new("Sky")
+    s.Name = "Sky"
+    s.Parent = game.Lighting
+    s.SkyboxBk = decalURL
+    s.SkyboxDn = decalURL
+    s.SkyboxFt = decalURL
+    s.SkyboxLf = decalURL
+    s.SkyboxRt = decalURL
+    s.SkyboxUp = decalURL
+    game.Lighting.TimeOfDay = 12
+
+    while true do
+        game.Lighting.Ambient = Color3.new(math.random(), math.random(), math.random())
+        wait(0.01)
+        game.Lighting.ShadowColor = Color3.new(math.random(), math.random(), math.random())
+        wait(0.01)
+    end
+
+end, "Troll", "Decal spam + GUI image + particles")
+
+
 
 FunctionManager:register("JOHN DOE", function()
 
